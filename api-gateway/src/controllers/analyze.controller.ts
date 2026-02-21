@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
+import { analysisQueue } from '../services/queue';
 
-export const analyzeStock = (req: Request, res: Response): void => {
+export const analyzeStock = async (req: Request, res: Response): Promise<void> => {
   const { ticker } = req.body;
   
   if (!ticker) {
@@ -8,10 +9,17 @@ export const analyzeStock = (req: Request, res: Response): void => {
     return;
   }
 
-  // Placeholder response
-  res.status(200).json({ 
-    message: `Analysis request received for ${ticker}`,
-    status: 'success',
-    ticker
-  });
+  try {
+    const job = await analysisQueue.add('analyze-stock', { ticker });
+    
+    res.status(202).json({ 
+      message: 'Analysis job queued successfully.',
+      jobId: job.id,
+      ticker,
+      status: 'queued'
+    });
+  } catch (error) {
+    console.error('Error adding job to queue:', error);
+    res.status(500).json({ error: 'Failed to queue analysis job' });
+  }
 };
