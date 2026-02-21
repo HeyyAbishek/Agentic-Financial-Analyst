@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from agents.workflow import app as graph_app
+from core.graph import app as graph_app
 from core.state import AgentState
 
 router = APIRouter()
@@ -16,6 +16,7 @@ async def analyze_stock(request: AnalyzeRequest):
     try:
         # Initialize state
         initial_state: AgentState = {
+            "ticker": request.ticker,
             "user_query": f"Analyze {request.ticker}",
             "financial_data": {},
             "agent_scratchpad": [],
@@ -29,6 +30,7 @@ async def analyze_stock(request: AnalyzeRequest):
         return {
             "status": "success",
             "ticker": request.ticker,
+            "financial_data": result.get("financial_data"),
             "recommendation": result.get("final_recommendation"),
             "scratchpad": result.get("agent_scratchpad")
         }

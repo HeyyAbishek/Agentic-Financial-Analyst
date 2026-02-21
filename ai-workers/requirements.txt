@@ -3,3 +3,5 @@ uvicorn
 langgraph
 langchain-openai
 python-dotenv
+yfinance
+langchain-groq
