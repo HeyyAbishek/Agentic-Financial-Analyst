@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { analyzeStock } from '../controllers/analyze.controller';
+import { analyzeStock, getJobStatus } from '../controllers/analyze.controller';
 
 const router = Router();
 
 router.post('/analyze', analyzeStock);
+router.get('/analyze/:id', getJobStatus);
 
 export default router;

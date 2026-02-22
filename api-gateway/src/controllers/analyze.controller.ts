@@ -23,3 +23,28 @@ export const analyzeStock = async (req: Request, res: Response): Promise<void> =
     res.status(500).json({ error: 'Failed to queue analysis job' });
   }
 };
+
+export const getJobStatus = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    const job = await analysisQueue.getJob(id as string);
+
+    if (!job) {
+      res.status(404).json({ error: 'Job not found' });
+      return;
+    }
+
+    const state = await job.getState();
+    const result = job.returnvalue;
+
+    res.status(200).json({ 
+      jobId: id, 
+      state: state, 
+      result: result || null 
+    });
+  } catch (error) {
+    console.error(`Error fetching job status for ID ${id}:`, error);
+    res.status(500).json({ error: 'Failed to fetch job status' });
+  }
+};
