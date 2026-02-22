@@ -8,4 +8,6 @@ class AgentState(TypedDict):
     user_query: str
     financial_data: Dict[str, Any]
     agent_scratchpad: List[str]
+    bull_thesis: Optional[str]
+    bear_thesis: Optional[str]
     final_recommendation: Optional[str]
