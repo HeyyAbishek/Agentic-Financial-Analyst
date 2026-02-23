@@ -12,7 +12,8 @@ def synthesize_debate(state: AgentState) -> dict:
         # Initialize the Groq model (The Judge)
         llm = ChatGroq(
             groq_api_key=os.getenv("GROQ_API_KEY"),
-            model_name=os.getenv("JUDGE_MODEL_NAME","llama-3.3-70b-versatile")
+            model_name=os.getenv("JUDGE_MODEL_NAME","llama-3.3-70b-versatile"),
+            max_retries=3,
         )
         # Notice how we only use {} for the exact variables we are passing in
         prompt = ChatPromptTemplate.from_template(
@@ -27,6 +28,7 @@ def synthesize_debate(state: AgentState) -> dict:
             "**Justification:**\n"
             "[Your detailed, decisive reasoning here]"
         )
+
 
         chain = prompt | llm
         
