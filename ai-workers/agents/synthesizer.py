@@ -12,19 +12,20 @@ def synthesize_debate(state: AgentState) -> dict:
         # Initialize the Groq model (The Judge)
         llm = ChatGroq(
             groq_api_key=os.getenv("GROQ_API_KEY"),
-            model_name="llama-3.1-8b-instant"
+            model_name=os.getenv("JUDGE_MODEL_NAME","llama-3.3-70b-versatile")
         )
-
         # Notice how we only use {} for the exact variables we are passing in
         prompt = ChatPromptTemplate.from_template(
-            "You are a Senior Portfolio Manager at a top hedge fund. "
-            "Your job is to make a final investment recommendation for {ticker}.\n\n"
-            "You have received two opposing views from your analysts:\n"
-            "--- BULL THESIS ---\n{bull_thesis}\n\n"
-            "--- BEAR THESIS ---\n{bear_thesis}\n\n"
-            "Weigh both arguments carefully. Provide a final, balanced recommendation "
-            "(Bullish, Bearish, or Neutral) and a strong justification explaining why one analyst's "
-            "argument outweighs the other."
+            "You are a bold, decisive Lead Investment Hedge Fund Manager. "
+            "Your job is to review the Bull and Bear theses for {ticker} and make a definitive call. "
+            "Do not be overly cautious. Avoid 'Neutral' unless the data is perfectly balanced. "
+            "If the growth potential is massive, go Bullish. If the risks are too high, go Bearish.\n\n"
+            "Bull Thesis:\n{bull_thesis}\n\n"
+            "Bear Thesis:\n{bear_thesis}\n\n"
+            "You MUST use this EXACT format:\n"
+            "**Final Recommendation:** [Bullish, Bearish, or Neutral]\n\n"
+            "**Justification:**\n"
+            "[Your detailed, decisive reasoning here]"
         )
 
         chain = prompt | llm

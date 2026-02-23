@@ -10,14 +10,19 @@ def analyze_risk(state: AgentState) -> dict:
 
         # Hardcoded to the exact Gemini model string
         llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
+            model=os.getenv("BEAR_MODEL_NAME","gemini-2.5-flash"),
             temperature=0.2
         )
 
         prompt = ChatPromptTemplate.from_template(
-            "You are a bearish, pessimistic financial risk manager. Write a highly critical 1-paragraph risk assessment for {ticker}.\n\n"
-            "Use this live market data to support your claims:\n{financial_data}\n\n"
-            "Focus strictly on vulnerabilities, fierce competition, high valuation, and macroeconomic threats."
+            "You are the Skeptical Risk Officer. Your job is to find every reason NOT to invest in {ticker}.\n\n"
+            "Current Data for {ticker}:\n{financial_data}\n\n"
+            "Focus your analysis on:\n"
+            "1. RECENT MOMENTUM: If the stock is down significantly today or near its 52-week low, highlight this as a major red flag.\n"
+            "2. VALUATION: Argue that the P/E ratio is too high or unsustainable.\n"
+            "3. EXTERNAL THREATS: Mention competition, regulatory risks, and macroeconomic headwinds (inflation, interest rates).\n"
+            "4. OPERATIONAL RISKS: Focus on supply chain issues or reliance on specific leadership.\n\n"
+            "Be critical, pessimistic, and data-driven."
         )
 
         chain = prompt | llm
@@ -25,4 +30,5 @@ def analyze_risk(state: AgentState) -> dict:
 
         return {"bear_thesis": response.content}
     except Exception as e:
+        print(f"\n❌ BEAR AGENT CRASHED: {str(e)}\n")
         return {"bear_thesis": f"Error: {str(e)}"}
