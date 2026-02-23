@@ -1,4 +1,4 @@
-from typing import TypedDict, Optional, List, Dict, Any
+from typing import TypedDict, Optional, List
 
 class AgentState(TypedDict):
     """
@@ -6,7 +6,7 @@ class AgentState(TypedDict):
     """
     ticker: str
     user_query: str
-    financial_data: Dict[str, Any]
+    financial_data: str  # Changed to str as requested for easier prompt injection
     agent_scratchpad: List[str]
     bull_thesis: Optional[str]
     bear_thesis: Optional[str]
