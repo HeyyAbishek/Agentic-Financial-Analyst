@@ -19,6 +19,9 @@ interface JobStatusResponse {
 }
 
 function App() {
+  // --- PRODUCTION API URL ---
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api-gateway-analyst.onrender.com';
+  
   const [ticker, setTicker] = useState('');
   const [jobId, setJobId] = useState<string | null>(null);
   const [report, setReport] = useState<string | null>(null);
@@ -37,14 +40,15 @@ function App() {
     setPolling(false);
 
     try {
-      const response = await axios.post<AnalysisResponse>('http://localhost:3000/api/v1/analyze', {
+      // Hits the live Render API
+      const response = await axios.post<AnalysisResponse>(`${API_BASE_URL}/api/v1/analyze`, {
         ticker: ticker.toUpperCase()
       });
 
       setJobId(response.data.jobId);
       setPolling(true);
     } catch (err) {
-      setError('Failed to start analysis. Please check the ticker and try again.');
+      setError('Failed to start analysis. The server might be waking up—please try again in a moment.');
       setIsLoading(false);
       console.error(err);
     }
@@ -56,7 +60,7 @@ function App() {
     if (polling && jobId) {
       intervalId = setInterval(async () => {
         try {
-          const response = await axios.get<JobStatusResponse>(`http://localhost:3000/api/v1/analyze/${jobId}`);
+          const response = await axios.get<JobStatusResponse>(`${API_BASE_URL}/api/v1/analyze/${jobId}`);
           const { state, result, error: jobError } = response.data;
 
           if (state === 'completed' && result) {
@@ -68,20 +72,16 @@ function App() {
             setIsLoading(false);
             setPolling(false);
           }
-          // Continue polling if state is 'waiting' or 'active'
         } catch (err) {
-          setError('Error checking job status.');
-          setIsLoading(false);
-          setPolling(false);
-          console.error(err);
+          console.error('Polling error:', err);
         }
-      }, 2000);
+      }, 3000); // Polling every 3 seconds for production
     }
 
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [polling, jobId]);
+  }, [polling, jobId, API_BASE_URL]);
 
   return (
     <div className="dashboard-container">
