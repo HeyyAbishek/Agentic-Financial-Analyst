@@ -1,12 +1,30 @@
 import asyncio
 import os
 import time  # Added for the delay logic
+import threading
 from dotenv import load_dotenv
 from bullmq import Worker
+from flask import Flask
 from core.graph import app as graph_app
 from core.state import AgentState
 
 load_dotenv()
+
+# --- THE DUMMY WEB SERVER HACK ---
+app = Flask(__name__)
+
+@app.route('/')
+def health_check():
+    return "AI Worker is alive and running!", 200
+
+def run_dummy_server():
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
+
+# Start the dummy server on a separate background thread
+threading.Thread(target=run_dummy_server, daemon=True).start()
+# ---------------------------------
+
 
 async def process_job(job, job_token):
     ticker = job.data.get("ticker")
@@ -41,16 +59,16 @@ async def process_job(job, job_token):
         raise e
 
 async def main():
-    redis_host = os.getenv("REDIS_HOST", "127.0.0.1")
-    redis_port = int(os.getenv("REDIS_PORT", 6379))
-    
-    print(f"Initializing Worker for 'analysis-queue' at {redis_host}:{redis_port}...")
+    # --- THE 2-LINE FIX ---
+    redis_url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379")
+    print(f"Initializing Worker for 'analysis-queue' with Upstash...")
     
     worker = Worker(
         "analysis-queue", 
         process_job, 
-        {"connection": {"host": redis_host, "port": redis_port}}
+        {"connection": redis_url} # BullMQ accepts the Upstash rediss:// URL directly here
     )
+    # ----------------------
     
     print("Worker is running and listening for jobs...")
     await asyncio.Future()
