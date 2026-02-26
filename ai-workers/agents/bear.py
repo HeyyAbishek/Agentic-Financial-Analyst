@@ -16,6 +16,8 @@ def analyze_risk(state: AgentState) -> dict:
             "2. VALUATION: Argue that the P/E ratio is too high or unsustainable.\n"
             "3. EXTERNAL THREATS: Mention competition, regulatory risks, and macroeconomic headwinds (inflation, interest rates).\n"
             "4. OPERATIONAL RISKS: Focus on supply chain issues or reliance on specific leadership.\n\n"
+            "CRITICAL RULE: Tailor your risks strictly to the company's specific industry. "
+            "Do not invent physical supply chain risks for digital software companies, and do not invent digital risks for physical manufacturers.\n\n"
             "Be critical, pessimistic, and data-driven."
         )
 
