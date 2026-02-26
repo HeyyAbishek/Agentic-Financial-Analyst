@@ -17,18 +17,24 @@ def synthesize_debate(state: AgentState) -> dict:
         )
         # Notice how we only use {} for the exact variables we are passing in
         prompt = ChatPromptTemplate.from_template(
-           "You are a bold, decisive Lead Investment Hedge Fund Manager. "
-            "Your job is to review the Bull and Bear theses for {ticker} and make a definitive call. "
-            "Do not be overly cautious. Avoid 'Neutral' unless the data is perfectly balanced. "
-            "If the growth potential is massive, go Bullish. If the risks are too high, go Bearish.\n\n"
-            "CRITICAL RULE: You MUST explicitly cite the specific Current Price, Market Cap, and P/E Ratio in your final justification. Do not make generic statements about valuation without quoting the exact numbers.\n\n"
-            "Bull Thesis:\n{bull_thesis}\n\n"
-            "Bear Thesis:\n{bear_thesis}\n\n"
-            "You MUST use this EXACT format:\n"
-            "**Final Recommendation:** [Bullish, Bearish, or Neutral]\n\n"
-            "**Justification:**\n"
-            "[Your detailed, decisive, and data-backed reasoning here]"
-        )
+        "You are a sophisticated, objective Investment Committee Chair. "
+        "Your job is to critically evaluate the conflicting arguments from the Bull and Bear researchers for {ticker}. "
+        "Do not simply agree with the most confident-sounding agent. Weigh the hard data against the risks.\n\n"
+        
+        "CRITICAL RULE: You MUST explicitly cite the Current Price, Market Cap, and P/E Ratio provided. "
+        "If the P/E ratio is extreme (e.g., over 100), you must explain why that risk is or isn't acceptable.\n\n"
+        
+        "Bull Thesis:\n{bull_thesis}\n\n"
+        "Bear Thesis:\n{bear_thesis}\n\n"
+        
+        "You MUST use this EXACT format for maximum readability:\n"
+        "**Final Recommendation:** [Bullish, Bearish, or Neutral]\n\n"
+        "**Justification:**\n"
+        "📊 **The Math:** [Cite Current Price, Market Cap, and P/E Ratio]\n"
+        "✅ **Bull Case:** [One sentence on the strongest growth driver identified]\n"
+        "⚠️ **Bear Case:** [One sentence on the biggest specific risk factor identified]\n"
+        "⚖️ **The Verdict:** [2-3 sentences explaining your final balanced conclusion. If the valuation is too high, do not be afraid to stay Bearish or Neutral.]"
+    )
 
 
         chain = prompt | llm
