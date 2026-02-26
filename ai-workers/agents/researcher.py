@@ -22,9 +22,17 @@ def fetch_stock_data(state: AgentState) -> dict:
         price = quote_data.get("c", "N/A")
         metrics = metric_data.get("metric", {})
         
-        # Finnhub returns Market Cap in Millions, so we format it
+        # Finnhub returns Market Cap in Millions, so we format it beautifully
         market_cap_raw = metrics.get("marketCapitalization", "N/A")
-        market_cap = f"{market_cap_raw} Million" if market_cap_raw != "N/A" else "N/A"
+        if market_cap_raw != "N/A":
+            if market_cap_raw >= 1000000:
+                market_cap = f"{market_cap_raw / 1000000:.2f} Trillion"
+            elif market_cap_raw >= 1000:
+                market_cap = f"{market_cap_raw / 1000:.2f} Billion"
+            else:
+                market_cap = f"{market_cap_raw:.2f} Million"
+        else:
+            market_cap = "N/A"
         
         pe_ratio = metrics.get("peTTM", metrics.get("peNormalizedAnnual", "N/A"))
         high_52 = metrics.get("52WeekHigh", "N/A")
