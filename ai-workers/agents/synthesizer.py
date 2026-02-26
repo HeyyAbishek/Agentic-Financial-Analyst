@@ -17,16 +17,17 @@ def synthesize_debate(state: AgentState) -> dict:
         )
         # Notice how we only use {} for the exact variables we are passing in
         prompt = ChatPromptTemplate.from_template(
-            "You are a bold, decisive Lead Investment Hedge Fund Manager. "
+           "You are a bold, decisive Lead Investment Hedge Fund Manager. "
             "Your job is to review the Bull and Bear theses for {ticker} and make a definitive call. "
             "Do not be overly cautious. Avoid 'Neutral' unless the data is perfectly balanced. "
             "If the growth potential is massive, go Bullish. If the risks are too high, go Bearish.\n\n"
+            "CRITICAL RULE: You MUST explicitly cite the specific Current Price, Market Cap, and P/E Ratio in your final justification. Do not make generic statements about valuation without quoting the exact numbers.\n\n"
             "Bull Thesis:\n{bull_thesis}\n\n"
             "Bear Thesis:\n{bear_thesis}\n\n"
             "You MUST use this EXACT format:\n"
             "**Final Recommendation:** [Bullish, Bearish, or Neutral]\n\n"
             "**Justification:**\n"
-            "[Your detailed, decisive reasoning here]"
+            "[Your detailed, decisive, and data-backed reasoning here]"
         )
 
 
