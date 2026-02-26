@@ -8,3 +8,4 @@ langchain-groq
 bullmq
 redis
 langchain-google-genai
+flask
