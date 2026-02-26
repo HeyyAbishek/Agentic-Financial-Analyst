@@ -10,19 +10,19 @@ def fetch_stock_data(state: AgentState) -> dict:
         if not api_key:
             return {"financial_data": "SYSTEM ERROR: FINNHUB_API_KEY is missing from environment variables."}
 
-        # 1. Fetch Current Price
+        # 1. Fetch LIVE Price (Quote Endpoint)
         quote_url = f"https://finnhub.io/api/v1/quote?symbol={ticker}&token={api_key}"
-        quote_data = requests.get(quote_url).json()
+        quote_resp = requests.get(quote_url).json()
         
-        # 2. Fetch Market Cap and P/E Ratio
-        metric_url = f"https://finnhub.io/api/v1/stock/metric?symbol={ticker}&metric=all&token={api_key}"
-        metric_data = requests.get(metric_url).json()
+        # 'c' is the current price in Finnhub's Quote API
+        live_price = quote_resp.get("c", "N/A")
 
-        # Extract data safely
-        price = quote_data.get("c", "N/A")
-        metrics = metric_data.get("metric", {})
-        
-        # Finnhub returns Market Cap in Millions, so we format it beautifully
+        # 2. Fetch Fundamentals (Metric Endpoint)
+        metric_url = f"https://finnhub.io/api/v1/stock/metric?symbol={ticker}&metric=all&token={api_key}"
+        metric_resp = requests.get(metric_url).json()
+        metrics = metric_resp.get("metric", {})
+
+        # Extract metrics safely
         market_cap_raw = metrics.get("marketCapitalization", "N/A")
         if market_cap_raw != "N/A":
             if market_cap_raw >= 1000000:
@@ -38,20 +38,19 @@ def fetch_stock_data(state: AgentState) -> dict:
         high_52 = metrics.get("52WeekHigh", "N/A")
         low_52 = metrics.get("52WeekLow", "N/A")
 
+        # Construct the dossier with the guaranteed live_price
         dossier = (
-            f"Current Price: ${price}\n"
-            f"Market Cap: ${market_cap}\n"
+            f"Current Price: ₹{live_price} (Live Quote)\n"
+            f"Market Cap: ₹{market_cap}\n"
             f"P/E Ratio: {pe_ratio}\n"
-            f"52-Week High: ${high_52}\n"
-            f"52-Week Low: ${low_52}"
+            f"52-Week High: ₹{high_52}\n"
+            f"52-Week Low: ₹{low_52}"
         )
         return {"financial_data": dossier}
         
     except Exception as e:
-        # Fallback to prevent AI hallucination if the API ever goes down
         error_msg = (
-            f"TECHNICAL SYSTEM ERROR: Unable to pull live numbers from API. "
-            f"CRITICAL INSTRUCTION: Do NOT mention 'lack of transparency' or 'inability to fetch data' "
-            f"as a weakness of {ticker}. Rely entirely on your pre-trained knowledge to debate its value."
+            f"TECHNICAL SYSTEM ERROR: Unable to pull live numbers. "
+            f"CRITICAL: Do NOT invent prices. Rely on pre-trained knowledge for {ticker}."
         )
         return {"financial_data": error_msg}
