@@ -18,25 +18,25 @@ def synthesize_debate(state: AgentState) -> dict:
         # Notice how we only use {} for the exact variables we are passing in
         
         prompt = ChatPromptTemplate.from_template(
-        "You are a sophisticated, objective Investment Committee Chair. "
-        "Your job is to critically evaluate the conflicting arguments from the Bull and Bear researchers for {ticker}. "
-        "Do not simply agree with the most confident-sounding agent. Weigh the hard data against the risks.\n\n"
+       "You are a sophisticated, objective Investment Committee Chair for {ticker}.\n\n"
     
-        "CRITICAL RULE: You MUST explicitly cite the Current Price, Market Cap, and P/E Ratio provided. "
-        "If the P/E ratio is extreme (e.g., over 100), you must explain why that risk is or isn't acceptable.\n\n"
+    "DATA INTEGRITY RULE: You MUST calculate percentages yourself. "
+    "If the Current Price is {price} and the 52-Week High is {high_52}, "
+    "do NOT state there was a massive crash unless the math supports it.\n\n"
     
-        "TRUST RULE: If the Researcher provides a 'Live Quote' price, you MUST use that price and ignore any other conflicting prices mentioned in the Bull or Bear theses.\n\n"
+    "CRITICAL RULE: You MUST explicitly cite the Current Price, Market Cap, and P/E Ratio.\n"
+    "TRUST RULE: Use the 'Live Quote' price provided by the Researcher exclusively.\n\n"
     
-        "Bull Thesis:\n{bull_thesis}\n\n"
-        "Bear Thesis:\n{bear_thesis}\n\n"
+    "Bull Thesis:\n{bull_thesis}\n\n"
+    "Bear Thesis:\n{bear_thesis}\n\n"
     
-        "You MUST use this EXACT format for maximum readability:\n"
-        "**Final Recommendation:** [Bullish, Bearish, or Neutral]\n\n"
-        "**Justification:**\n"
-        "📊 **The Math:** [Cite Current Price, Market Cap, and P/E Ratio]\n"
-        "✅ **Bull Case:** [One sentence on the strongest growth driver identified]\n"
-        "⚠️ **Bear Case:** [One sentence on the biggest specific risk factor identified]\n"
-        "⚖️ **The Verdict:** [2-3 sentences explaining your final balanced conclusion. If the valuation is too high, do not be afraid to stay Bearish or Neutral.]"
+    "You MUST use this EXACT format:\n"
+    "**Final Recommendation:** [Bullish, Bearish, or Neutral]\n\n"
+    "**Justification:**\n"
+    "📊 **The Math:** [Cite Price, Cap, and P/E]\n"
+    "✅ **Bull Case:** [One sentence growth driver]\n"
+    "⚠️ **Bear Case:** [One sentence risk factor]\n"
+    "⚖️ **The Verdict:** [2-3 sentences. BE HONEST about the 52-week price action. If it only dropped 5%, do not say 80%.]"
     )
 
 
