@@ -4,21 +4,32 @@ from core.state import AgentState
 
 def fetch_stock_data(state: AgentState) -> dict:
     try:
-        ticker = state.get("ticker", "Unknown")
+        ticker = state.get("ticker", "Unknown").upper().strip()
         api_key = os.environ.get("FINNHUB_API_KEY")
         
-        if not api_key:
-            return {"financial_data": "SYSTEM ERROR: FINNHUB_API_KEY is missing from environment variables."}
+        # 1. SMART TICKER HANDLING
+        # If the user typed DELHIVERY, we automatically try DELHIVERY.NS
+        if ".NS" not in ticker and ".BO" not in ticker:
+            # You can add a list of common US tickers to ignore this, 
+            # or just let the first attempt fail and retry with .NS
+            search_ticker = f"{ticker}.NS"
+        else:
+            search_ticker = ticker
 
-        # 1. Fetch LIVE Price (Quote Endpoint)
-        quote_url = f"https://finnhub.io/api/v1/quote?symbol={ticker}&token={api_key}"
+        # 2. Fetch LIVE Price
+        quote_url = f"https://finnhub.io/api/v1/quote?symbol={search_ticker}&token={api_key}"
         quote_resp = requests.get(quote_url).json()
         
-        # 'c' is the current price in Finnhub's Quote API
+        # If .NS failed, try the original (maybe it's a US stock like AAPL)
+        if quote_resp.get("c") == 0 or quote_resp.get("c") is None:
+            search_ticker = ticker
+            quote_url = f"https://finnhub.io/api/v1/quote?symbol={search_ticker}&token={api_key}"
+            quote_resp = requests.get(quote_url).json()
+
         live_price = quote_resp.get("c", "N/A")
 
-        # 2. Fetch Fundamentals (Metric Endpoint)
-        metric_url = f"https://finnhub.io/api/v1/stock/metric?symbol={ticker}&metric=all&token={api_key}"
+        # 3. Fetch Metrics
+        metric_url = f"https://finnhub.io/api/v1/stock/metric?symbol={search_ticker}&metric=all&token={api_key}"
         metric_resp = requests.get(metric_url).json()
         metrics = metric_resp.get("metric", {})
 
