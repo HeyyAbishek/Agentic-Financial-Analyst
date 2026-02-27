@@ -7,8 +7,9 @@ def fetch_stock_data(state: AgentState) -> dict:
         ticker = state.get("ticker", "Unknown").upper().strip()
         api_key = os.environ.get("FINNHUB_API_KEY")
         
+        # SAFETY CHECK: Prevent crash if API key is missing
         if not api_key:
-            return {"financial_data": "SYSTEM ERROR: FINNHUB_API_KEY is missing."}
+            return {"financial_data": "SYSTEM ERROR: FINNHUB_API_KEY is missing from environment."}
 
         # 1. SMART TICKER HANDLING
         search_ticker = f"{ticker}.NS" if ".NS" not in ticker and ".BO" not in ticker else ticker
@@ -28,15 +29,15 @@ def fetch_stock_data(state: AgentState) -> dict:
         m_res = requests.get(metric_url).json()
         metrics = m_res.get("metric", {})
 
-        # Extract market cap (Note: May be in native currency for international stocks)
+        # Extract market cap
         market_cap_raw = metrics.get("marketCapitalization", "N/A")
         if market_cap_raw != "N/A" and market_cap_raw != 0:
             if market_cap_raw >= 1000000:
-                market_cap = f"{market_cap_raw / 1000000:.2f} Trillion (Native Currency)"
+                market_cap = f"{market_cap_raw / 1000000:.2f} Trillion (Local Units)"
             elif market_cap_raw >= 1000:
-                market_cap = f"{market_cap_raw / 1000:.2f} Billion (Native Currency)"
+                market_cap = f"{market_cap_raw / 1000:.2f} Billion (Local Units)"
             else:
-                market_cap = f"{market_cap_raw:.2f} Million"
+                market_cap = f"{market_cap_raw:.2f} Million (Local Units)"
         else:
             market_cap = "Large Cap Enterprise (Data Syncing)"
 
@@ -46,8 +47,6 @@ def fetch_stock_data(state: AgentState) -> dict:
             high_52 = "Data Syncing (Awaiting Exchange Update)"
 
         pe_ratio = metrics.get("peTTM", metrics.get("peNormalizedAnnual", "N/A"))
-        if pe_ratio == "N/A" or pe_ratio is None or pe_ratio == 0:
-            pe_ratio = "Industry Standard (Historical)"
 
         # 4. FINAL DOSSIER
         dossier = (
@@ -61,4 +60,4 @@ def fetch_stock_data(state: AgentState) -> dict:
         return {"financial_data": dossier}
         
     except Exception as e:
-        return {"financial_data": f"FATAL API ERROR for {ticker}: {str(e)}"}
+        return {"financial_data": f"FATAL ERROR: {str(e)}"}
