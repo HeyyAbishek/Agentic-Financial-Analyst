@@ -15,7 +15,7 @@ def fetch_stock_data(state: AgentState) -> dict:
         quote_url = f"https://finnhub.io/api/v1/quote?symbol={search_ticker}&token={api_key}"
         res = requests.get(quote_url).json()
 
-        # FALLBACK: Try original ticker for US markets if Indian check returns 0
+        # FALLBACK: Try original ticker for US/International markets
         if res.get("c") == 0 or res.get("c") is None:
             search_ticker = ticker.replace(".NS", "").replace(".BO", "")
             quote_url = f"https://finnhub.io/api/v1/quote?symbol={search_ticker}&token={api_key}"
@@ -28,25 +28,25 @@ def fetch_stock_data(state: AgentState) -> dict:
         m_res = requests.get(metric_url).json()
         metrics = m_res.get("metric", {})
 
-        # Extract and format market cap safely
+        # Extract market cap (Note: May be in native currency for international stocks)
         market_cap_raw = metrics.get("marketCapitalization", "N/A")
         if market_cap_raw != "N/A" and market_cap_raw != 0:
             if market_cap_raw >= 1000000:
-                market_cap = f"{market_cap_raw / 1000000:.2f} Trillion"
+                market_cap = f"{market_cap_raw / 1000000:.2f} Trillion (Native Currency)"
             elif market_cap_raw >= 1000:
-                market_cap = f"{market_cap_raw / 1000:.2f} Billion"
+                market_cap = f"{market_cap_raw / 1000:.2f} Billion (Native Currency)"
             else:
                 market_cap = f"{market_cap_raw:.2f} Million"
         else:
             market_cap = "Large Cap Enterprise (Data Syncing)"
 
-        # 3. APPLY DATA NOISE FILTERS (Fixes the "2025" glitch)
+        # 3. APPLY DATA NOISE FILTERS
         high_52 = metrics.get("52WeekHigh", "N/A")
-        if high_52 == 2025 or high_52 == "2025":
-            high_52 = "Data Syncing (Current Year Glitch)"
+        if high_52 == 2025 or high_52 == "2025" or high_52 == 0:
+            high_52 = "Data Syncing (Awaiting Exchange Update)"
 
         pe_ratio = metrics.get("peTTM", metrics.get("peNormalizedAnnual", "N/A"))
-        if pe_ratio == "N/A" or pe_ratio is None:
+        if pe_ratio == "N/A" or pe_ratio is None or pe_ratio == 0:
             pe_ratio = "Industry Standard (Historical)"
 
         # 4. FINAL DOSSIER
@@ -56,7 +56,7 @@ def fetch_stock_data(state: AgentState) -> dict:
             f"Market Cap: {market_cap}\n"
             f"P/E Ratio: {pe_ratio}\n"
             f"52-Week High: {high_52}\n"
-            "NOTE: Perform analysis based on provided data. If 52-Week High is syncing, do not assume a crash."
+            "NOTE: If 52-Week High is 'Data Syncing', avoid calculating drop percentages."
         )
         return {"financial_data": dossier}
         
