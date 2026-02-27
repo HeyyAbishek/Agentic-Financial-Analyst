@@ -7,33 +7,28 @@ def fetch_stock_data(state: AgentState) -> dict:
         ticker = state.get("ticker", "Unknown").upper().strip()
         api_key = os.environ.get("FINNHUB_API_KEY")
         
-        # 1. SMART TICKER HANDLING
-        # If the user typed DELHIVERY, we automatically try DELHIVERY.NS
-        if ".NS" not in ticker and ".BO" not in ticker:
-            # You can add a list of common US tickers to ignore this, 
-            # or just let the first attempt fail and retry with .NS
-            search_ticker = f"{ticker}.NS"
-        else:
-            search_ticker = ticker
+        if not api_key:
+            return {"financial_data": "SYSTEM ERROR: FINNHUB_API_KEY is missing from environment variables."}
 
-        # 2. Fetch LIVE Price
+        # 1. TRY PRIMARY (NSE for Indian context)
+        search_ticker = f"{ticker}.NS" if ".NS" not in ticker and ".BO" not in ticker else ticker
         quote_url = f"https://finnhub.io/api/v1/quote?symbol={search_ticker}&token={api_key}"
-        quote_resp = requests.get(quote_url).json()
-        
-        # If .NS failed, try the original (maybe it's a US stock like AAPL)
-        if quote_resp.get("c") == 0 or quote_resp.get("c") is None:
-            search_ticker = ticker
+        res = requests.get(quote_url).json()
+
+        # 2. FALLBACK (If NSE fails or returns 0, try original ticker for US markets)
+        if res.get("c") == 0 or res.get("c") is None:
+            search_ticker = ticker.replace(".NS", "").replace(".BO", "")
             quote_url = f"https://finnhub.io/api/v1/quote?symbol={search_ticker}&token={api_key}"
-            quote_resp = requests.get(quote_url).json()
+            res = requests.get(quote_url).json()
 
-        live_price = quote_resp.get("c", "N/A")
-
-        # 3. Fetch Metrics
+        # 3. GATHER DATA
+        price = res.get("c", "N/A")
+        
         metric_url = f"https://finnhub.io/api/v1/stock/metric?symbol={search_ticker}&metric=all&token={api_key}"
-        metric_resp = requests.get(metric_url).json()
-        metrics = metric_resp.get("metric", {})
+        m_res = requests.get(metric_url).json()
+        metrics = m_res.get("metric", {})
 
-        # Extract metrics safely
+        # Extract and format market cap
         market_cap_raw = metrics.get("marketCapitalization", "N/A")
         if market_cap_raw != "N/A":
             if market_cap_raw >= 1000000:
@@ -44,24 +39,18 @@ def fetch_stock_data(state: AgentState) -> dict:
                 market_cap = f"{market_cap_raw:.2f} Million"
         else:
             market_cap = "N/A"
-        
-        pe_ratio = metrics.get("peTTM", metrics.get("peNormalizedAnnual", "N/A"))
-        high_52 = metrics.get("52WeekHigh", "N/A")
-        low_52 = metrics.get("52WeekLow", "N/A")
 
-        # Construct the dossier with the guaranteed live_price
+        # 4. FINAL DOSSIER (With Debug Info for Transparency)
         dossier = (
-            f"Current Price: ₹{live_price} (Live Quote)\n"
+            f"DEBUG INFO: Final Ticker Used: {search_ticker}\n"
+            f"Current Price: ₹{price} (Live Quote)\n"
             f"Market Cap: ₹{market_cap}\n"
-            f"P/E Ratio: {pe_ratio}\n"
-            f"52-Week High: ₹{high_52}\n"
-            f"52-Week Low: ₹{low_52}"
+            f"P/E Ratio: {metrics.get('peTTM', metrics.get('peNormalizedAnnual', 'N/A'))}\n"
+            f"52-Week High: ₹{metrics.get('52WeekHigh', 'N/A')}\n"
+            f"52-Week Low: ₹{metrics.get('52WeekLow', 'N/A')}"
         )
         return {"financial_data": dossier}
         
     except Exception as e:
-        error_msg = (
-            f"TECHNICAL SYSTEM ERROR: Unable to pull live numbers. "
-            f"CRITICAL: Do NOT invent prices. Rely on pre-trained knowledge for {ticker}."
-        )
-        return {"financial_data": error_msg}
+        # Fallback to prevent AI hallucination
+        return {"financial_data": f"FATAL API ERROR for {ticker}: {str(e)}"}
