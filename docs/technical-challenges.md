@@ -43,3 +43,16 @@ We migrated from a Monolithic synchronous request to an Event-Driven architectur
 * **Asynchronous Queues:** The Next.js frontend pushes jobs to a Redis-backed BullMQ queue via a Node.js API Gateway, receiving an instant `202 Accepted` response to bypass the Vercel timeout.
 * **The "Microservice Trigger":** To combat the Render Cold Start, the Node.js Gateway fires an asynchronous, fire-and-forget HTTP `GET` request directly to the Render URL the exact millisecond a job enters the queue. This "wakes up" the Python container immediately.
 * **Cron Keep-Alive:** Implemented a scheduled cron job to continually ping the worker, ensuring the service remains hot and ready for 0-latency queue processing during peak usage.
+
+---
+
+### 4. API Coverage & Data Silos
+
+**The Problem**
+During testing with international giants (e.g., Saudi Aramco, Samsung, ASML), the Finnhub Free Tier often returns `0` or `null` for real-time price and 52-week metrics. This happens because most international exchanges require paid licensing for real-time data distribution, which is restricted on the API's base tier.
+
+**The Solution: Intelligence Fallbacks**
+Rather than letting the system crash or display misleading $0 valuations, I implemented a "Graceful Degradation" strategy:
+* **Validation Check:** The Python backend checks if `price == 0`. If detected, it prevents the data from reaching the LLM agents.
+* **Contextual Tagging:** The system injects a message: *"Market Data restricted by provider for this exchange."*
+* **LLM Adaptation:** The agents are instructed to skip quantitative analysis for these tickers and instead focus on qualitative "Company Profile" analysis based on the available fundamental news.
