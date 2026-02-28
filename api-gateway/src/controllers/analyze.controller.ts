@@ -10,8 +10,19 @@ export const analyzeStock = async (req: Request, res: Response): Promise<void> =
   }
 
   try {
+    // 1. Add the job to the Redis queue
     const job = await analysisQueue.add('analyze-stock', { ticker });
     
+    // 2. THE MICROSERVICE TRIGGER (Wake up Render)
+    // IMPORTANT: Replace this with your actual Render URL!
+    const RENDER_WORKER_URL = 'https://your-python-worker-xyz.onrender.com';
+    
+    // Fire-and-forget ping. We do not 'await' so the Vercel frontend doesn't hang.
+    fetch(RENDER_WORKER_URL).catch((err) => {
+        console.error("Worker ping failed/ignored:", err.message);
+    });
+
+    // 3. Respond to the Vercel frontend immediately
     res.status(202).json({ 
       message: 'Analysis job queued successfully.',
       jobId: job.id,
