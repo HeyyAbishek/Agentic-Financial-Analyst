@@ -6,12 +6,14 @@
 
 <img width="1846" height="904" alt="Screenshot 2026-03-01 001859" src="https://github.com/user-attachments/assets/b5b52ae3-b1fa-41de-8832-0625c2508871" />
 
-
 ## 🚀 Live Demo
 
-[🎥 Screen.Recording.2026-02-28.mp4 Placeholder]
 
-👉 **[View Live Deployment](https://your-deployment-link.vercel.app)** *(Try searching for `TSM`, `RELIANCE.NS`, or `GME` to see the agents debate!)*
+https://github.com/user-attachments/assets/08f85afc-6104-4343-9065-abee9f11497b
+
+
+
+👉 **[View Live Deployment](https://your-deployment-link.vercel.app)** *(Try searching for `AAPL`, `NVDA`, or `GME` to see the agents debate!)*
 
 ## 📚 Documentation
 
