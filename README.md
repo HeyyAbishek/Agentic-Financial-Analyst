@@ -13,7 +13,7 @@ https://github.com/user-attachments/assets/08f85afc-6104-4343-9065-abee9f11497b
 
 
 
-👉 **[View Live Deployment](https://your-deployment-link.vercel.app)** *(Try searching for `AAPL`, `NVDA`, or `GME` to see the agents debate!)*
+👉 **[View Live Deployment](https://agentic-financial-analyst.vercel.app/)** *(Try searching for `AAPL`, `NVDA`, or `GME` to see the agents debate!)*
 
 ## 📚 Documentation
 
