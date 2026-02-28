@@ -4,7 +4,8 @@
 
 **Agentic Financial Analyst** is a production-grade AI platform that performs autonomous fundamental stock analysis. It solves the "LLM Hallucination" problem by using deterministic math guardrails, real-time market data injection, and a specialized multi-agent workflow to simulate a real-world investment committee.
 
-![Agentic Analyst Dashboard UI Placeholder](link_to_your_screenshot.png)
+<img width="1846" height="904" alt="Screenshot 2026-03-01 001859" src="https://github.com/user-attachments/assets/b5b52ae3-b1fa-41de-8832-0625c2508871" />
+
 
 ## 🚀 Live Demo
 
