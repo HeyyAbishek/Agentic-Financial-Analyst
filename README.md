@@ -25,12 +25,14 @@ I have documented the engineering decisions and system design in detail:
 
 ## ✨ Key Features
 
+* **High-Concurrency Scalability:** Uses Redis (BullMQ) to decouple the frontend from the heavy LLM backend. If a sudden spike of traffic hits the app, the event-driven architecture seamlessly queues the jobs instead of dropping connections, protecting the free-tier Python workers and third-party APIs from fatal rate-limit crashes.
 * **Multi-Agent Workflow:** Utilizes LangGraph to coordinate four distinct AI personas: a **Researcher** (Data Retrieval), a **Bull** (Optimist), a **Bear** (Pessimist), and a **Judge** (Synthesizer).
 * **Hallucination Prevention:** Strict prompt engineering and "Math Guardrails" force the LLM to calculate deterministic percentages rather than inventing fake market crashes.
 * **Graceful Degradation:** Smart fallback logic handles unreliable API endpoints (e.g., replacing corrupted `$0` prices with "Data Syncing") to keep the AI's logic intact.
 * **Global Currency Normalization:** Dynamically scales market caps and standardizes local currencies (like TWD and INR) into readable USD equivalents for global consistency.
 * **Real-Time Data Injection:** Integrates the **Finnhub API** for live quotes, P/E ratios, and 52-week highs to ground the AI's analysis in absolute reality.
-* **Asynchronous AI Queues:** Uses **Redis** and a hybrid deployment (Node.js on Vercel, Python AI Workers on Render) to handle long-running AI inference tasks without frontend timeouts.
+
+
 
 ---
-Built by **Abishek Jha**
+*Built by [Abishek Jha](https://github.com/HeyyAbishek)*
