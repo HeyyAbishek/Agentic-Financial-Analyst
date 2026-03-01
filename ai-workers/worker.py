@@ -30,9 +30,15 @@ threading.Thread(target=run_dummy_server, daemon=True).start()
 # ---------------------------------
 
 async def process_job(job, job_token):
-    ticker = job.data.get("ticker")
+    # BullMQ Python can be tricky; data might be in job.data or job.data['data']
+    raw_data = job.data
+    
+    # Try to find the ticker in either location (Smart Data Grabber)
+    ticker = raw_data.get("ticker") or (isinstance(raw_data.get("data"), dict) and raw_data.get("data").get("ticker"))
+    
     if not ticker:
-        print("Error: Job received without ticker", flush=True)
+        # This helps us debug exactly what the worker IS seeing
+        print(f"Error: Job received without ticker. Raw data seen: {raw_data}", flush=True)
         return {"error": "No ticker provided"}
     
     # --- COOL DOWN LOGIC ---
@@ -72,7 +78,7 @@ async def main():
         health_check_interval=30
     )
     
-    # 2. Pass the custom connection object directly to BullMQ
+    # 2. Pass the custom connection object directly to BullMQ with 5-Min Lock
     worker = Worker(
         "analysis-queue", 
         process_job, 
@@ -86,7 +92,7 @@ async def main():
     
     print("Worker is running and listening for jobs...", flush=True)
     
-    # Better than asyncio.Future() for Render log visibility
+    # Keep process alive and logs flowing
     while True:
         await asyncio.sleep(3600)
 
