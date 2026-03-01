@@ -10,31 +10,35 @@ export const analyzeStock = async (req: Request, res: Response): Promise<void> =
   }
 
   try {
-    // 1. Add the job to the Redis queue with a UNIQUE ID and cleaned data
+    // 1. Explicitly clean the string to avoid hidden character issues
+    const cleanTicker = ticker.toUpperCase().trim();
+    
+    // 2. FORCE BullMQ to treat the data as a plain object
+    // Using Date.now() guarantees a fresh ID every single time
     const job = await analysisQueue.add(
       'analyze-stock', 
-      { ticker: ticker.toUpperCase().trim() }, 
+      { ticker: cleanTicker }, // Plain object payload
       { 
-        jobId: `job-${ticker}-${Date.now()}`, // Prevents the "Empty Job ID 1" error
-        removeOnComplete: true, 
-        removeOnFail: 1000 
+        jobId: `job-${cleanTicker}-${Date.now()}`,
+        removeOnComplete: true,
+        removeOnFail: false // Stop the noise of retries while we confirm this fix
       }
     );
-    
-    // 2. THE MICROSERVICE TRIGGER (Wake up Render)
+
+    // This log is crucial—check your Node.js console for this!
+    console.log(`Job Created: ${job.id} with ticker: ${cleanTicker}`);
+
+    // 3. Wake up the Render Worker
     const RENDER_WORKER_URL = 'https://ai-worker-analyst.onrender.com';
-    
-    // Fire-and-forget ping to ensure the worker is warm
     fetch(RENDER_WORKER_URL).catch((err: any) => {
         console.error("Worker ping failed/ignored:", err.message);
     });
 
-    // 3. Respond to the Vercel frontend immediately
+    // 4. Respond to the frontend
     res.status(202).json({ 
-      message: 'Analysis job queued successfully.',
-      jobId: job.id,
-      ticker: ticker.toUpperCase(),
-      status: 'queued'
+      jobId: job.id, 
+      ticker: cleanTicker,
+      message: 'Analysis job successfully queued.'
     });
   } catch (error) {
     console.error('Error adding job to queue:', error);
