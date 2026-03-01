@@ -10,15 +10,22 @@ export const analyzeStock = async (req: Request, res: Response): Promise<void> =
   }
 
   try {
-    // 1. Add the job to the Redis queue
-    const job = await analysisQueue.add('analyze-stock', { ticker });
+    // 1. Add the job to the Redis queue with a UNIQUE ID and cleaned data
+    const job = await analysisQueue.add(
+      'analyze-stock', 
+      { ticker: ticker.toUpperCase().trim() }, 
+      { 
+        jobId: `job-${ticker}-${Date.now()}`, // Prevents the "Empty Job ID 1" error
+        removeOnComplete: true, 
+        removeOnFail: 1000 
+      }
+    );
     
     // 2. THE MICROSERVICE TRIGGER (Wake up Render)
-    // IMPORTANT: Replace this with your actual Render URL!
-    const RENDER_WORKER_URL = 'https://your-python-worker-xyz.onrender.com';
+    const RENDER_WORKER_URL = 'https://ai-worker-analyst.onrender.com';
     
-    // Fire-and-forget ping. We do not 'await' so the Vercel frontend doesn't hang.
-    fetch(RENDER_WORKER_URL).catch((err) => {
+    // Fire-and-forget ping to ensure the worker is warm
+    fetch(RENDER_WORKER_URL).catch((err: any) => {
         console.error("Worker ping failed/ignored:", err.message);
     });
 
@@ -26,7 +33,7 @@ export const analyzeStock = async (req: Request, res: Response): Promise<void> =
     res.status(202).json({ 
       message: 'Analysis job queued successfully.',
       jobId: job.id,
-      ticker,
+      ticker: ticker.toUpperCase(),
       status: 'queued'
     });
   } catch (error) {
