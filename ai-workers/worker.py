@@ -71,11 +71,15 @@ async def main():
         health_check_interval=30
     )
     
-    # 2. Pass the custom connection object directly to BullMQ
+    # 2. Pass the custom connection object directly to BullMQ with extended Lock
     worker = Worker(
         "analysis-queue", 
         process_job, 
-        {"connection": redis_conn}
+        {
+            "connection": redis_conn,
+            "lockDuration": 120000,  # 120 seconds (gives AI plenty of time to debate)
+            "maxStalledCount": 1     # Prevents infinite retry loops if it actually crashes
+        }
     )
     # ----------------------
     
