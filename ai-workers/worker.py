@@ -30,23 +30,38 @@ threading.Thread(target=run_dummy_server, daemon=True).start()
 # ---------------------------------
 
 async def process_job(job, job_token):
-    # BullMQ Python can be tricky; data might be in job.data or job.data['data']
+    # --- BRUTE FORCE DATA CHECK ---
+    # We check every possible place BullMQ hides data
     raw_data = job.data
+    ticker = None
     
-    # 1. Handle the empty {} case immediately to stop the error loop
-    if not raw_data:
-        print(f"Skipping empty job (ID: {job.id}). No data found.", flush=True)
-        return {"error": "Empty job data"}
-
-    # 2. Smart Ticker Logic: Look in both common BullMQ data locations
-    ticker = raw_data.get("ticker") or (isinstance(raw_data.get("data"), dict) and raw_data.get("data").get("ticker"))
+    # Check 1: Standard data object
+    if isinstance(raw_data, dict):
+        ticker = raw_data.get("ticker")
     
+    # Check 2: Nested data object (Common in Node -> Python)
+    if not ticker and isinstance(raw_data, dict) and isinstance(raw_data.get("data"), dict):
+        ticker = raw_data.get("data").get("ticker")
+        
+    # Check 3: The "Raw Dictionary" fallback (Library bypass)
     if not ticker:
-        # Debug exactly what is being received if ticker is missing
-        print(f"Error: Job {job.id} received without ticker. Raw data: {raw_data}", flush=True)
-        return {"error": "No ticker provided"}
-    
-    # --- COOL DOWN LOGIC ---
+        raw_dict = getattr(job, "__dict__", {})
+        data_attr = raw_dict.get("data")
+        if isinstance(data_attr, dict):
+            ticker = data_attr.get("ticker")
+        elif isinstance(data_attr, str):
+            # Sometimes data arrives as a stringified JSON
+            try:
+                import json
+                ticker = json.loads(data_attr).get("ticker")
+            except:
+                pass
+
+    if not ticker:
+        print(f"DEBUG: Job {job.id} is still empty. Full Raw Job Data: {raw_data}", flush=True)
+        return {"error": "No ticker found"}
+
+    # --- ANALYSIS LOGIC ---
     print(f"Cooling down API for 2 seconds before starting {ticker}...", flush=True)
     await asyncio.sleep(2) 
     
@@ -61,7 +76,6 @@ async def process_job(job, job_token):
             "final_recommendation": None
         }
         
-        # Heavy AI agent orchestration starts here
         result = await graph_app.ainvoke(initial_state)
         recommendation = result.get("final_recommendation")
         
@@ -77,20 +91,20 @@ async def main():
     redis_url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379")
     print(f"Initializing Worker for 'analysis-queue' with Upstash...", flush=True)
     
-    # 1. Custom Redis connection with 30-second heartbeat (prevents Zombie state)
+    # 1. Custom Redis connection with 30-second heartbeat
     redis_conn = Redis.from_url(
         redis_url,
         health_check_interval=30
     )
     
-    # 2. BullMQ Worker with 5-Minute Lock (gives agents time to think)
+    # 2. BullMQ Worker with 5-Minute Lock
     worker = Worker(
         "analysis-queue", 
         process_job, 
         {
             "connection": redis_conn,
-            "lockDuration": 300000, # 300,000ms = 5 Minutes
-            "maxStalledCount": 0    # Stop infinite retry loops on failure
+            "lockDuration": 300000, # 5 Minutes
+            "maxStalledCount": 0    
         }
     )
     # ----------------------
