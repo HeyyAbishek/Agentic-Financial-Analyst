@@ -1,6 +1,6 @@
 import asyncio
 import os
-import time  # Added for the delay logic
+import time
 import threading
 from dotenv import load_dotenv
 from bullmq import Worker
@@ -21,7 +21,7 @@ def health_check():
     return "AI Worker is alive and running!", 200
 
 def run_dummy_server():
-    # Use 10000 as default to match Render's environment
+    # Render binds to port 10000 by default
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
@@ -33,12 +33,17 @@ async def process_job(job, job_token):
     # BullMQ Python can be tricky; data might be in job.data or job.data['data']
     raw_data = job.data
     
-    # Try to find the ticker in either location (Smart Data Grabber)
+    # 1. Handle the empty {} case immediately to stop the error loop
+    if not raw_data:
+        print(f"Skipping empty job (ID: {job.id}). No data found.", flush=True)
+        return {"error": "Empty job data"}
+
+    # 2. Smart Ticker Logic: Look in both common BullMQ data locations
     ticker = raw_data.get("ticker") or (isinstance(raw_data.get("data"), dict) and raw_data.get("data").get("ticker"))
     
     if not ticker:
-        # This helps us debug exactly what the worker IS seeing
-        print(f"Error: Job received without ticker. Raw data seen: {raw_data}", flush=True)
+        # Debug exactly what is being received if ticker is missing
+        print(f"Error: Job {job.id} received without ticker. Raw data: {raw_data}", flush=True)
         return {"error": "No ticker provided"}
     
     # --- COOL DOWN LOGIC ---
@@ -56,7 +61,7 @@ async def process_job(job, job_token):
             "final_recommendation": None
         }
         
-        # This is where the heavy AI agent work happens
+        # Heavy AI agent orchestration starts here
         result = await graph_app.ainvoke(initial_state)
         recommendation = result.get("final_recommendation")
         
@@ -68,31 +73,31 @@ async def process_job(job, job_token):
         raise e
 
 async def main():
-    # --- THE FIX: Custom Redis connection with 30-second heartbeat ---
+    # --- THE PRODUCTION FIXES ---
     redis_url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379")
     print(f"Initializing Worker for 'analysis-queue' with Upstash...", flush=True)
     
-    # 1. Create the robust connection to prevent "Zombies"
+    # 1. Custom Redis connection with 30-second heartbeat (prevents Zombie state)
     redis_conn = Redis.from_url(
         redis_url,
         health_check_interval=30
     )
     
-    # 2. Pass the custom connection object directly to BullMQ with 5-Min Lock
+    # 2. BullMQ Worker with 5-Minute Lock (gives agents time to think)
     worker = Worker(
         "analysis-queue", 
         process_job, 
         {
             "connection": redis_conn,
-            "lockDuration": 300000, # 5 Minutes (gives plenty of time for AI debate)
-            "maxStalledCount": 0    # Don't retry stalled jobs automatically
+            "lockDuration": 300000, # 300,000ms = 5 Minutes
+            "maxStalledCount": 0    # Stop infinite retry loops on failure
         }
     )
     # ----------------------
     
     print("Worker is running and listening for jobs...", flush=True)
     
-    # Keep process alive and logs flowing
+    # Keep process active and logs visible
     while True:
         await asyncio.sleep(3600)
 
