@@ -8,6 +8,9 @@ from flask import Flask
 from core.graph import app as graph_app
 from core.state import AgentState
 
+# --- NEW IMPORT FOR REDIS KEEP-ALIVE ---
+from redis.asyncio import Redis
+
 load_dotenv()
 
 # --- THE DUMMY WEB SERVER HACK ---
@@ -24,7 +27,6 @@ def run_dummy_server():
 # Start the dummy server on a separate background thread
 threading.Thread(target=run_dummy_server, daemon=True).start()
 # ---------------------------------
-
 
 async def process_job(job, job_token):
     ticker = job.data.get("ticker")
@@ -59,14 +61,21 @@ async def process_job(job, job_token):
         raise e
 
 async def main():
-    # --- THE 2-LINE FIX ---
+    # --- THE FIX: Custom Redis connection with 30-second heartbeat ---
     redis_url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379")
     print(f"Initializing Worker for 'analysis-queue' with Upstash...")
     
+    # 1. Create the robust connection to prevent "Zombies"
+    redis_conn = Redis.from_url(
+        redis_url,
+        health_check_interval=30
+    )
+    
+    # 2. Pass the custom connection object directly to BullMQ
     worker = Worker(
         "analysis-queue", 
         process_job, 
-        {"connection": redis_url} # BullMQ accepts the Upstash rediss:// URL directly here
+        {"connection": redis_conn}
     )
     # ----------------------
     
