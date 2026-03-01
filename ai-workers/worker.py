@@ -77,7 +77,7 @@ async def main():
         process_job, 
         {
             "connection": redis_conn,
-            "lockDuration": 120000,  # 120 seconds (gives AI plenty of time to debate)
+            "lockDuration": 300000,  
             "maxStalledCount": 1     # Prevents infinite retry loops if it actually crashes
         }
     )
