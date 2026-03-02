@@ -55,13 +55,14 @@ async def process_job(job, job_token):
     print(f"Starting analysis on ticker: {ticker}...", flush=True)
     
     try:
-        # --- 🌍 CURRENCY-AWARE INITIAL STATE ---
         initial_state: AgentState = {
             "ticker": ticker,
             "user_query": (
-                f"Analyze {ticker}. IMPORTANT: If this is an international company (like Samsung or Sony), "
-                "verify if price data is in USD or local currency (e.g., KRW, JPY). "
-                "Convert all final math to USD before giving the verdict."
+                f"Analyze {ticker}. 🚨 CRITICAL DATA SANITY CHECK: "
+                "1. If 'currentPrice' is 0 or N/A, do NOT assume bankruptcy. It is a data feed error for OTC/International stocks. "
+                "2. Check if the price/market cap is in USD or local currency (e.g., ₩ KRW for Samsung). "
+                "3. Samsung (SSNLF) is NOT at 0; its real price is ~₩85,000 KRW or ~$65 USD. "
+                "4. If data looks impossible (like a 100% drop), search for the REAL current price manually before giving a verdict."
             ),
             "financial_data": {},
             "agent_scratchpad": [],
