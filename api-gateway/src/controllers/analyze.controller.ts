@@ -20,8 +20,8 @@ export const analyzeStock = async (req: Request, res: Response): Promise<void> =
       { ticker: cleanTicker }, // Plain object payload
       { 
         jobId: `job-${cleanTicker}-${Date.now()}`,
-        removeOnComplete: true,
-        removeOnFail: false // Stop the noise of retries while we confirm this fix
+        removeOnComplete: 100,
+        removeOnFail: 100 // Stop the noise of retries while we confirm this fix
       }
     );
 
