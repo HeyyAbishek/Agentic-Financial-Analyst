@@ -64,10 +64,14 @@ async def process_job(job, job_token):
         result = await graph_app.ainvoke(initial_state)
         recommendation = result.get("final_recommendation")
         
-        print(f"SUCCESS: Analysis finished for {ticker}.", flush=True)
+        # 1. FORCE THE AI OBJECT INTO A PLAIN STRING
+        final_text = str(recommendation)
         
-        # BullMQ will now successfully save this because the Redis connection is safe!
-        return recommendation 
+        # 2. PRINT IT SO YOU CAN SEE IT IN RENDER
+        print(f"SUCCESS: Analysis finished for {ticker}. Verdict: {final_text}", flush=True)
+        
+        # 3. RETURN THE PLAIN STRING TO BULLMQ
+        return final_text 
         
     except Exception as e:
         print(f"Error processing {ticker}: {str(e)}", flush=True)
