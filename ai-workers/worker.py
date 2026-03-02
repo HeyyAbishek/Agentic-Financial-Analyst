@@ -55,13 +55,19 @@ async def process_job(job, job_token):
     print(f"Starting analysis on ticker: {ticker}...", flush=True)
     
     try:
+        # --- 🌍 CURRENCY-AWARE INITIAL STATE ---
         initial_state: AgentState = {
             "ticker": ticker,
-            "user_query": f"Analyze {ticker}",
+            "user_query": (
+                f"Analyze {ticker}. IMPORTANT: If this is an international company (like Samsung or Sony), "
+                "verify if price data is in USD or local currency (e.g., KRW, JPY). "
+                "Convert all final math to USD before giving the verdict."
+            ),
             "financial_data": {},
             "agent_scratchpad": [],
             "final_recommendation": None
         }
+        
         result = await graph_app.ainvoke(initial_state)
         recommendation = result.get("final_recommendation")
         
