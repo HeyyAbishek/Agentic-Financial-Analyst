@@ -12,7 +12,6 @@ from redis.asyncio import Redis
 load_dotenv()
 
 # --- 1. SAFE REDIS CONNECTION ---
-# NO decode_responses=True! We let BullMQ handle its own bytes internally so it doesn't crash on completion.
 redis_url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379")
 redis_conn = Redis.from_url(redis_url, health_check_interval=30)
 
@@ -30,13 +29,15 @@ def run_dummy_server():
 threading.Thread(target=run_dummy_server, daemon=True).start()
 
 async def process_job(job, job_token):
-    ticker = None
-    
-    # --- 2. THE MANUAL BYTES DECODER ---
-    # The library gives us {} because of the cross-language mismatch. We fetch it manually.
-    job_id_str = job.id.decode('utf-8') if isinstance(job.id, bytes) else str(job.id)
+    # --- 🚨 THE ULTIMATE GHOST BUSTER 🚨 ---
+    # We force the library to use a clean string so it saves to the correct Node.js folder!
+    if isinstance(job.id, bytes):
+        job.id = job.id.decode('utf-8')
+        
+    job_id_str = str(job.id)
     job_key = f"bull:analysis-queue:{job_id_str}"
     
+    ticker = None
     try:
         raw_hash = await redis_conn.hgetall(job_key)
         if raw_hash and b'data' in raw_hash:
@@ -64,13 +65,12 @@ async def process_job(job, job_token):
         result = await graph_app.ainvoke(initial_state)
         recommendation = result.get("final_recommendation")
         
-        # 1. FORCE THE AI OBJECT INTO A PLAIN STRING
+        # FORCE THE AI OBJECT INTO A PLAIN STRING
         final_text = str(recommendation)
         
-        # 2. PRINT IT SO YOU CAN SEE IT IN RENDER
         print(f"SUCCESS: Analysis finished for {ticker}. Verdict: {final_text}", flush=True)
         
-        # 3. RETURN THE PLAIN STRING TO BULLMQ
+        # BullMQ will now save this to the CORRECT key because we fixed job.id!
         return final_text 
         
     except Exception as e:
@@ -78,7 +78,7 @@ async def process_job(job, job_token):
         raise e
 
 async def main():
-    print(f"Initializing Hybrid Production Worker...", flush=True)
+    print(f"Initializing Final Production Worker...", flush=True)
     worker = Worker(
         "analysis-queue", 
         process_job, 
