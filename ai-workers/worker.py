@@ -2,6 +2,7 @@ import asyncio
 import os
 import time
 import threading
+import json
 from dotenv import load_dotenv
 from bullmq import Worker
 from flask import Flask
@@ -12,6 +13,14 @@ from core.state import AgentState
 from redis.asyncio import Redis
 
 load_dotenv()
+
+# --- 1. GLOBAL REDIS CONNECTION (The Source of Truth) ---
+redis_url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379")
+# We make this global so process_job can manually fetch data from it
+redis_conn = Redis.from_url(
+    redis_url,
+    health_check_interval=30
+)
 
 # --- THE DUMMY WEB SERVER HACK ---
 app = Flask(__name__)
@@ -30,41 +39,35 @@ threading.Thread(target=run_dummy_server, daemon=True).start()
 # ---------------------------------
 
 async def process_job(job, job_token):
-    # --- BRUTE FORCE DATA CHECK ---
-    # We check every possible place BullMQ hides data
-    raw_data = job.data
+    # --- MANUAL REDIS DATA FETCH ---
+    # Since the library is returning {}, we fetch it manually from the Hash
     ticker = None
-    
-    # Check 1: Standard data object
-    if isinstance(raw_data, dict):
-        ticker = raw_data.get("ticker")
-    
-    # Check 2: Nested data object (Common in Node -> Python)
-    if not ticker and isinstance(raw_data, dict) and isinstance(raw_data.get("data"), dict):
-        ticker = raw_data.get("data").get("ticker")
+    try:
+        # 1. Get the raw hash from Redis using the Job ID
+        # The key in Redis is usually 'bull:analysis-queue:<ID>'
+        job_key = f"bull:analysis-queue:{job.id}"
+        raw_hash = await redis_conn.hgetall(job_key)
         
-    # Check 3: The "Raw Dictionary" fallback (Library bypass)
+        # 2. Extract the 'data' field from the hash
+        if raw_hash and b'data' in raw_hash:
+            data_str = raw_hash[b'data'].decode('utf-8')
+            parsed_data = json.loads(data_str)
+            ticker = parsed_data.get("ticker")
+            
+    except Exception as e:
+        print(f"Manual fetch failed: {str(e)}", flush=True)
+
+    # --- FALLBACK TO LIBRARY DATA ---
     if not ticker:
-        raw_dict = getattr(job, "__dict__", {})
-        data_attr = raw_dict.get("data")
-        if isinstance(data_attr, dict):
-            ticker = data_attr.get("ticker")
-        elif isinstance(data_attr, str):
-            # Sometimes data arrives as a stringified JSON
-            try:
-                import json
-                ticker = json.loads(data_attr).get("ticker")
-            except:
-                pass
+        ticker = job.data.get("ticker") if isinstance(job.data, dict) else None
 
     if not ticker:
-        print(f"DEBUG: Job {job.id} is still empty. Full Raw Job Data: {raw_data}", flush=True)
+        print(f"DEBUG: Job {job.id} is STILL empty even after manual fetch.", flush=True)
         return {"error": "No ticker found"}
 
-    # --- ANALYSIS LOGIC ---
+    # --- THE REST OF YOUR LOGIC ---
     print(f"Cooling down API for 2 seconds before starting {ticker}...", flush=True)
     await asyncio.sleep(2) 
-    
     print(f"Starting analysis on ticker: {ticker}", flush=True)
     
     try:
@@ -75,29 +78,18 @@ async def process_job(job, job_token):
             "agent_scratchpad": [],
             "final_recommendation": None
         }
-        
         result = await graph_app.ainvoke(initial_state)
         recommendation = result.get("final_recommendation")
-        
         print(f"Analysis finished for {ticker}. Recommendation: {recommendation}", flush=True)
         return recommendation
-        
     except Exception as e:
         print(f"Error processing {ticker}: {str(e)}", flush=True)
         raise e
 
 async def main():
-    # --- THE PRODUCTION FIXES ---
-    redis_url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379")
     print(f"Initializing Worker for 'analysis-queue' with Upstash...", flush=True)
     
-    # 1. Custom Redis connection with 30-second heartbeat
-    redis_conn = Redis.from_url(
-        redis_url,
-        health_check_interval=30
-    )
-    
-    # 2. BullMQ Worker with 5-Minute Lock
+    # 2. BullMQ Worker with 5-Minute Lock using the global connection
     worker = Worker(
         "analysis-queue", 
         process_job, 
