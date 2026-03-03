@@ -2,6 +2,9 @@ import asyncio
 import os
 import threading
 import json
+import datetime
+import requests
+import yfinance as yf
 from dotenv import load_dotenv
 from bullmq import Worker
 from flask import Flask
@@ -15,22 +18,100 @@ load_dotenv()
 redis_url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379")
 redis_conn = Redis.from_url(redis_url, health_check_interval=30)
 
-# --- THE DUMMY WEB SERVER ---
+# --- 2. THE CONSOLIDATED WEB SERVER (Fixes Cron & 404) ---
 app = Flask(__name__)
 
-@app.route('/')
+@app.route('/health')
 def health_check():
-    return "AI Worker is alive!", 200
+    # Only 2 bytes - stops "Response data too big" errors
+    return "ok", 200
+
+@app.route('/')
+def home():
+    return "AI Worker is Online", 200
 
 def run_dummy_server():
+    # Render uses port 10000 by default; ensures service stays awake
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
+# Start dummy server in background thread
 threading.Thread(target=run_dummy_server, daemon=True).start()
 
+# --- 3. THE GOD-TIER STOCK FETCH LOGIC ---
+def fetch_stock_data(state: AgentState) -> dict:
+    try:
+        ticker = state.get("ticker", "Unknown").upper().strip()
+        api_key = os.environ.get("FINNHUB_API_KEY")
+        
+        if not api_key:
+            return {"financial_data": "SYSTEM ERROR: FINNHUB_API_KEY is missing."}
+
+        # Handle Indian Market Tickers (.NS for NSE)
+        search_ticker = f"{ticker}.NS" if ".NS" not in ticker and ".BO" not in ticker else ticker
+        source = "Finnhub API"
+        
+        # Phase 1: Try Finnhub
+        quote_url = f"https://finnhub.io/api/v1/quote?symbol={search_ticker}&token={api_key}"
+        res = requests.get(quote_url).json()
+        live_price = res.get("c", 0)
+
+        # Phase 2: Yahoo Finance Fallback (Trigger for $0 or Indian Stocks)
+        if live_price == 0 or live_price is None or ".NS" in search_ticker:
+            try:
+                print(f"🔄 Switching to yfinance for {search_ticker}...", flush=True)
+                stock = yf.Ticker(search_ticker)
+                
+                # Using fast_info to avoid slow cached 'info' object
+                live_price = stock.fast_info.get('lastPrice', "N/A")
+                market_cap_raw = stock.fast_info.get('marketCap', 0)
+                high_52 = stock.fast_info.get('yearHigh', "N/A")
+                
+                # Standard info used only for P/E (often not in fast_info)
+                pe_ratio = stock.info.get('trailingPE', "N/A")
+                
+                # Currency/Scaling Logic (yfinance returns raw units)
+                if market_cap_raw >= 1_000_000_000_000:
+                    market_cap = f"{market_cap_raw / 1_000_000_000_000:.2f} Trillion"
+                else:
+                    market_cap = f"{market_cap_raw / 1_000_000_000:.2f} Billion"
+                
+                source = "Yahoo Finance (Scraped)"
+            except Exception as e:
+                print(f"❌ Scraper failed: {e}")
+                live_price, market_cap, high_52, pe_ratio = "N/A", "N/A", "N/A", "N/A"
+        else:
+            # Phase 3: Finnhub Metrics (If primary API worked)
+            metric_url = f"https://finnhub.io/api/v1/stock/metric?symbol={search_ticker}&metric=all&token={api_key}"
+            m_res = requests.get(metric_url).json()
+            metrics = m_res.get("metric", {})
+            
+            # Finnhub provides Market Cap in Millions
+            m_cap_millions = metrics.get("marketCapitalization", 0)
+            market_cap = f"{m_cap_millions / 1_000_000:.2f} Trillion" if m_cap_millions >= 1000000 else f"{m_cap_millions / 1000:.2f} Billion"
+            high_52 = metrics.get("52WeekHigh", "N/A")
+            pe_ratio = metrics.get("peTTM", "N/A")
+
+        # Create Sync Timestamp (IST)
+        updated_at = datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")
+
+        dossier = (
+            f"Data Source: {source}\n"
+            f"Ticker: {search_ticker}\n"
+            f"Current Price: {live_price}\n"
+            f"Market Cap: {market_cap}\n"
+            f"P/E Ratio: {pe_ratio}\n"
+            f"52-Week High: {high_52}\n"
+            f"🕒 Last Sync: {updated_at} IST (Market Delay: 15m)\n"
+        )
+        return {"financial_data": dossier}
+        
+    except Exception as e:
+        return {"financial_data": f"FATAL ERROR: {str(e)}"}
+
+# --- 4. THE ANALYSIS WORKER LOGIC ---
 async def process_job(job, job_token):
-    # --- 🚨 THE ULTIMATE GHOST BUSTER 🚨 ---
-    # We force the library to use a clean string so it saves to the correct Node.js folder!
+    # BullMQ ID Cleanup
     if isinstance(job.id, bytes):
         job.id = job.id.decode('utf-8')
         
@@ -51,19 +132,12 @@ async def process_job(job, job_token):
         print(f"CRITICAL: Job {job_id_str} has no ticker.", flush=True)
         return {"error": "No ticker found"}
 
-    # --- THE ANALYSIS LOGIC ---
     print(f"Starting analysis on ticker: {ticker}...", flush=True)
     
     try:
         initial_state: AgentState = {
             "ticker": ticker,
-            "user_query": (
-                f"Analyze {ticker}. 🚨 CRITICAL DATA SANITY CHECK: "
-                "1. If 'currentPrice' is 0 or N/A, do NOT assume bankruptcy. It is a data feed error for OTC/International stocks. "
-                "2. Check if the price/market cap is in USD or local currency (e.g., ₩ KRW for Samsung). "
-                "3. Samsung (SSNLF) is NOT at 0; its real price is ~₩85,000 KRW or ~$65 USD. "
-                "4. If data looks impossible (like a 100% drop), search for the REAL current price manually before giving a verdict."
-            ),
+            "user_query": f"Analyze {ticker} with current market conditions.",
             "financial_data": {},
             "agent_scratchpad": [],
             "final_recommendation": None
@@ -72,12 +146,8 @@ async def process_job(job, job_token):
         result = await graph_app.ainvoke(initial_state)
         recommendation = result.get("final_recommendation")
         
-        # FORCE THE AI OBJECT INTO A PLAIN STRING
         final_text = str(recommendation)
-        
-        print(f"SUCCESS: Analysis finished for {ticker}. Verdict: {final_text}", flush=True)
-        
-        # BullMQ will now save this to the CORRECT key because we fixed job.id!
+        print(f"SUCCESS: Analysis finished for {ticker}.", flush=True)
         return final_text 
         
     except Exception as e:
@@ -85,7 +155,7 @@ async def process_job(job, job_token):
         raise e
 
 async def main():
-    print(f"Initializing Final Production Worker...", flush=True)
+    print(f"Initializing Production AI Worker...", flush=True)
     worker = Worker(
         "analysis-queue", 
         process_job, 
