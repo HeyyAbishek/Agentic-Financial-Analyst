@@ -17,15 +17,22 @@ app.use(cors({
 
 app.use(express.json());
 
-// Routes
-app.use('/api/v1', analyzeRoutes);
+// --- 1. BASE ROUTES ---
 
-// Health check - This is the URL you will point your Cron-Job to!
+// Root route - Stops the "Cannot GET /" error
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).send('API Gateway is Online and Active 🚀');
+});
+
+// Health check - Minimal response to stop "Response data too big" errors
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).send('ok'); 
-});;
+});
 
-// Start server
+// --- 2. API ROUTES ---
+app.use('/api/v1', analyzeRoutes);
+
+// --- 3. START SERVER ---
 app.listen(PORT, () => {
   console.log(`API Gateway running on port ${PORT}`);
 });
