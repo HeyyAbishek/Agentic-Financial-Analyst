@@ -147,7 +147,10 @@ async def process_job(job, job_token):
         recommendation = result.get("final_recommendation")
         
         final_text = str(recommendation)
-        print(f"SUCCESS: Analysis finished for {ticker}.", flush=True)
+        
+        # ✅ SUCCESS LOGGING: Now includes the actual final verdict in Render logs
+        print(f"✅ SUCCESS: Analysis finished for {ticker}. VERDICT: {final_text}", flush=True)
+        
         return final_text 
         
     except Exception as e:
