@@ -22,8 +22,8 @@ app.use('/api/v1', analyzeRoutes);
 
 // Health check - This is the URL you will point your Cron-Job to!
 app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
-});
+  res.status(200).send('ok'); 
+});;
 
 // Start server
 app.listen(PORT, () => {
