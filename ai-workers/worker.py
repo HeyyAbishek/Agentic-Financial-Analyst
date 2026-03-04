@@ -23,11 +23,12 @@ app = Flask(__name__)
 
 @app.route('/health')
 def health_check():
-    # Only pings Cronitor when the server is ACTUALLY up and running
+    # This sends the "I'm alive" signal to your NEW scheduled job link
+    # It pings only when the server is ACTUALLY up and running
     try:
-        # Pinging your existing "important-heartbeat" monitor as requested
-        requests.get("https://cronitor.link/p/616d3832681b43128bce42a29de1631c/important-heartbeat", timeout=5)
+        requests.get("https://cronitor.link/p/616d3832681b43128bce42a29de1631c/jvMCj8", timeout=5)
     except Exception:
+        # Prevents any Cronitor connectivity issues from crashing your app
         pass 
     return "ok", 200
 
