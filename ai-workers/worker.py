@@ -23,14 +23,15 @@ app = Flask(__name__)
 
 @app.route('/health')
 def health_check():
-    # This sends the "I'm alive" signal to your NEW scheduled job link
-    # It pings only when the server is ACTUALLY up and running
     try:
+        # 1. Check if requests is actually working
+        import requests
         requests.get("https://cronitor.link/p/616d3832681b43128bce42a29de1631c/jvMCj8", timeout=5)
-    except Exception:
-        # Prevents any Cronitor connectivity issues from crashing your app
-        pass 
-    return "ok", 200
+        return "ok", 200
+    except Exception as e:
+        # 2. Even if it fails, send a TINY error so cron-job doesn't choke
+        print(f"Health check failed: {e}")
+        return "err", 200
 
 @app.route('/')
 def home():
