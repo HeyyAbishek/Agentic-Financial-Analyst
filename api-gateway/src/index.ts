@@ -11,13 +11,13 @@ const PORT = process.env.PORT || 3000;
 // --- 1. HEALTH CHECK & HEARTBEAT (Consolidated) ---
 app.get('/health', async (req: Request, res: Response) => {
   try {
-    // Sending the Heartbeat signal to your existing monitor
-    // This pings Cronitor only when the API is actually awake
-    await fetch("https://cronitor.link/p/616d3832681b43128bce42a29de1631c/important-heartbeat");
+    // Ping the new Cronitor URL (Safe Schedule: 9 AM - 7 PM IST)
+    // This tells Cronitor your API is awake and healthy
+    await fetch("https://cronitor.link/p/616d3832681b43128bce42a29de1631c/jvMCj8");
   } catch (e) {
     console.log("Cronitor ping failed");
   }
-  // .end() sends 0 bytes. Perfect for preventing "Response data too big" errors
+  // .end() keeps the response size at 0 bytes to prevent "Response too big" errors
   res.status(200).end(); 
 });
 
