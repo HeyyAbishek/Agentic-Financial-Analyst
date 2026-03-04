@@ -8,9 +8,16 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- 1. HEALTH CHECK (Minimal for Cron) ---
-app.get('/health', (req: Request, res: Response) => {
-  // .end() sends 0 bytes. Perfect for cron-job.org
+// --- 1. HEALTH CHECK & HEARTBEAT (Consolidated) ---
+app.get('/health', async (req: Request, res: Response) => {
+  try {
+    // Sending the Heartbeat signal to your existing monitor
+    // This pings Cronitor only when the API is actually awake
+    await fetch("https://cronitor.link/p/616d3832681b43128bce42a29de1631c/important-heartbeat");
+  } catch (e) {
+    console.log("Cronitor ping failed");
+  }
+  // .end() sends 0 bytes. Perfect for preventing "Response data too big" errors
   res.status(200).end(); 
 });
 
