@@ -8,31 +8,30 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware - Updated for production stability
+// --- 1. HEALTH CHECK (Minimal for Cron) ---
+app.get('/health', (req: Request, res: Response) => {
+  // .end() sends 0 bytes. Perfect for cron-job.org
+  res.status(200).end(); 
+});
+
+// Middleware - Production Stability
 app.use(cors({
-  origin: '*', // Allows all origins, including your Vercel deployment
+  origin: '*', 
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
 
 app.use(express.json());
 
-// --- 1. BASE ROUTES ---
-
-// Root route - Stops the "Cannot GET /" error
+// --- 2. BASE ROUTES ---
 app.get('/', (req: Request, res: Response) => {
   res.status(200).send('API Gateway is Online and Active 🚀');
 });
 
-// Health check - Minimal response to stop "Response data too big" errors
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).send('ok'); 
-});
-
-// --- 2. API ROUTES ---
+// --- 3. API ROUTES ---
 app.use('/api/v1', analyzeRoutes);
 
-// --- 3. START SERVER ---
+// --- 4. START SERVER ---
 app.listen(PORT, () => {
   console.log(`API Gateway running on port ${PORT}`);
 });
