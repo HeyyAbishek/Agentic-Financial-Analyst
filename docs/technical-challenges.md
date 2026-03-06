@@ -56,3 +56,18 @@ Rather than letting the system crash or display misleading $0 valuations, I impl
 * **Validation Check:** The Python backend checks if `price == 0`. If detected, it prevents the data from reaching the LLM agents.
 * **Contextual Tagging:** The system injects a message: *"Market Data restricted by provider for this exchange."*
 * **LLM Adaptation:** The agents are instructed to skip quantitative analysis for these tickers and instead focus on qualitative "Company Profile" analysis based on the available fundamental news.
+
+---
+
+### 5. Single Point of Failure in Data Sourcing (The Indian Market Gap)
+**The Problem**
+Relying exclusively on a single API provider creates a massive single point of failure. Specifically, the primary data provider (Finnhub) lacks real-time coverage for Indian equities on the National Stock Exchange (NSE), consistently returning missing data or a $0 price for any ticker ending in .NS.
+
+**The Solution: Dynamic Scraper Fallback (yfinance)**
+To ensure global market coverage and prevent the AI from generating "N/A" analyses, we engineered a multi-tiered data fetching pipeline with an automatic fallback mechanism.
+
+Condition Trigger: The Python worker evaluates the initial API response. If it detects a live_price of 0, a None value, or recognizes an Indian market suffix (.NS), it intercepts the process.
+
+The yfinance Pivot: The system instantly abandons the primary API and initiates a live scrape of Yahoo Finance using the yfinance library.
+
+Optimized Execution: Because Yahoo Finance aggressively throttles standard data requests, the fallback is optimized to use stock.fast_info instead of the heavier stock.info object. This rapidly extracts the last price, market cap, and 52-week high, guaranteeing the agents always receive accurate quantitative data without timing out.
