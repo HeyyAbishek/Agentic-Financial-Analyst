@@ -74,13 +74,18 @@ def fetch_stock_data(state: AgentState) -> dict:
                 
                 stock = yf.Ticker(search_ticker)
                 
-                # Using fast_info to avoid slow cached 'info' object
+                # Using fast_info to avoid slow cached 'info' object (This rarely fails)
                 live_price = stock.fast_info.get('lastPrice', "N/A")
                 market_cap_raw = stock.fast_info.get('marketCap', 0)
                 high_52 = stock.fast_info.get('yearHigh', "N/A")
                 
-                # Standard info used only for P/E
-                pe_ratio = stock.info.get('trailingPE', "N/A")
+                # --- THE FIX: Isolate the fragile info call ---
+                try:
+                    pe_ratio = stock.info.get('trailingPE', "N/A")
+                except Exception as pe_error:
+                    print(f"⚠️ P/E Scrape blocked by Yahoo: {pe_error}", flush=True)
+                    pe_ratio = "N/A" # Default to N/A, but keep the price!
+                # ----------------------------------------------
                 
                 # --- STOP SCRAPE STOPWATCH ---
                 print(f"⏱️ YFINANCE TOOK: {time.time() - scrape_start:.2f} seconds", flush=True)
