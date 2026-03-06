@@ -5,6 +5,7 @@ import json
 import datetime
 import requests
 import yfinance as yf
+import time  # <-- 1. IMPORT ADDED HERE
 from dotenv import load_dotenv
 from bullmq import Worker
 from flask import Flask
@@ -67,6 +68,10 @@ def fetch_stock_data(state: AgentState) -> dict:
         if live_price == 0 or live_price is None or ".NS" in search_ticker:
             try:
                 print(f"🔄 Switching to yfinance for {search_ticker}...", flush=True)
+                
+                # --- START SCRAPE STOPWATCH ---
+                scrape_start = time.time()
+                
                 stock = yf.Ticker(search_ticker)
                 
                 # Using fast_info to avoid slow cached 'info' object
@@ -76,6 +81,9 @@ def fetch_stock_data(state: AgentState) -> dict:
                 
                 # Standard info used only for P/E
                 pe_ratio = stock.info.get('trailingPE', "N/A")
+                
+                # --- STOP SCRAPE STOPWATCH ---
+                print(f"⏱️ YFINANCE TOOK: {time.time() - scrape_start:.2f} seconds", flush=True)
                 
                 # Currency/Scaling Logic
                 if market_cap_raw >= 1_000_000_000_000:
@@ -150,7 +158,14 @@ async def process_job(job, job_token):
             "final_recommendation": None
         }
         
+        # --- START AI STOPWATCH ---
+        ai_start = time.time()
+        
         result = await graph_app.ainvoke(initial_state)
+        
+        # --- STOP AI STOPWATCH ---
+        print(f"⏱️ TOTAL AI WORKFLOW TOOK: {time.time() - ai_start:.2f} seconds", flush=True)
+        
         recommendation = result.get("final_recommendation")
         
         final_text = str(recommendation)
