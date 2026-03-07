@@ -23,6 +23,7 @@ function App() {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api-gateway-analyst.onrender.com';
   
   const [ticker, setTicker] = useState('');
+  const [analyzedTicker, setAnalyzedTicker] = useState<string | null>(null); // THE FIX: Snapshot state
   const [jobId, setJobId] = useState<string | null>(null);
   const [report, setReport] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,6 +39,9 @@ function App() {
     setReport(null);
     setJobId(null);
     setPolling(false);
+    
+    // THE FIX: Lock in the ticker they actually clicked "Analyze" for
+    setAnalyzedTicker(ticker.toUpperCase());
 
     try {
       // Hits the live Render API
@@ -134,7 +138,8 @@ function App() {
         {report && (
           <div className="report-card fade-in">
             <div className="report-header">
-              <h2>Investment Thesis: {ticker.toUpperCase()}</h2>
+              {/* THE FIX: Use the locked-in snapshot, NOT the live input */}
+              <h2>Investment Thesis: {analyzedTicker}</h2>
               <span className="badge completed">Analysis Complete</span>
             </div>
             <div className="markdown-content">
