@@ -17,7 +17,8 @@ load_dotenv()
 
 # --- 1. SAFE REDIS CONNECTION ---
 redis_url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379")
-redis_conn = Redis.from_url(redis_url, health_check_interval=30)
+# THE FIX: Changed from 30 to 300 to stop ping spamming!
+redis_conn = Redis.from_url(redis_url, health_check_interval=300)
 
 # --- 2. THE CONSOLIDATED WEB SERVER (Fixes Cron & 404) ---
 app = Flask(__name__)
