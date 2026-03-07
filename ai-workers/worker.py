@@ -192,10 +192,17 @@ async def main():
         {
             "connection": redis_conn,
             "lockDuration": 300000, 
-            "maxStalledCount": 0    
+            "maxStalledCount": 0,
+            # --- THE ANTI-SPAM FIX (Saves Upstash Limits) ---
+            "drainDelay": 15,          # Wait 15 seconds after queue empties before polling again
+            "stalledInterval": 300000, # Only check for stuck jobs every 5 minutes (300,000 ms)
+            "metrics": {
+                "maxDataPoints": 0     # Stop storing unnecessary metrics
+            }
+            # ------------------------------------------------
         }
     )
-    print("Worker is live. Waiting for jobs...", flush=True)
+    print("Worker is live and optimized for Upstash. Waiting for jobs...", flush=True)
     while True:
         await asyncio.sleep(3600)
 
