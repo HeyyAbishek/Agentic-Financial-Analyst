@@ -14,7 +14,7 @@ The Agentic Financial Analyst is built using an **Event-Driven Microservice Arch
 * **Role:** The traffic controller. 
 * **Mechanism:** It validates the incoming ticker, serializes the request into a job payload, and pushes it onto the **BullMQ** queue. It immediately responds to the client with an HTTP `202 Accepted` status.
 
-### 3. The Message Broker (Redis / Upstash)
+### 3. The Message Broker (Redis / Redis Cloud)
 * **Role:** The state manager and buffer.
 * **Mechanism:** Stores the BullMQ queue hashes. This ensures that if 10,000 users request an analysis simultaneously, the system will not crash; the queue simply scales, protecting the Python workers from being overwhelmed.
 
