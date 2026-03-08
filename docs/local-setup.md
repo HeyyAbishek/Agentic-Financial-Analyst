@@ -6,7 +6,7 @@ Follow these steps to run the complete Agentic Financial Analyst microservice st
 Before you begin, ensure you have the following installed:
 * [Node.js](https://nodejs.org/) (v18 or higher)
 * [Python](https://www.python.org/downloads/) (v3.10 or higher)
-* A Redis instance (either running locally via Docker, or a free cloud database like [Upstash](https://upstash.com/))
+* A Redis instance (either running locally via Docker, or a free cloud database like [Redis Cloud](https://redis.com/try-free/))
 * API Keys for **Groq** and **Finnhub**.
 
 ## 1. Clone the Repository
@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 Create a `.env` file inside the `ai-worker` directory:
 ```env
-REDIS_URL="rediss://default:your-upstash-password@your-upstash-url.upstash.io:6379"
+REDIS_URL="redis://default:your_password@your_public_endpoint_url.redislabs.com:12345"
 GROQ_API_KEY="gsk_your_groq_api_key"
 FINNHUB_API_KEY="your_finnhub_api_key"
 ```
@@ -56,7 +56,7 @@ npm install
 
 Create a `.env` file inside the `api-gateway` directory:
 ```env
-REDIS_URL="rediss://default:your-upstash-password@your-upstash-url.upstash.io:6379"
+REDIS_URL="redis://default:your_password@your_public_endpoint_url.redislabs.com:12345"
 # Optional: Set this to your local Python worker URL for testing the wake-up ping
 RENDER_WORKER_URL="http://localhost:8000" 
 ```
