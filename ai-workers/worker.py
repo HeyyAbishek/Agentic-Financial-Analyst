@@ -5,7 +5,7 @@ import json
 import datetime
 import requests
 import yfinance as yf
-import time  # <-- 1. IMPORT ADDED HERE
+import time  
 from dotenv import load_dotenv
 from bullmq import Worker
 from flask import Flask
@@ -17,8 +17,8 @@ load_dotenv()
 
 # --- 1. SAFE REDIS CONNECTION ---
 redis_url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379")
-# THE FIX: Changed from 30 to 300 to stop ping spamming!
-redis_conn = Redis.from_url(redis_url, health_check_interval=300)
+# We are on Redis Cloud now! Normal health check is perfect.
+redis_conn = Redis.from_url(redis_url, health_check_interval=30)
 
 # --- 2. THE CONSOLIDATED WEB SERVER (Fixes Cron & 404) ---
 app = Flask(__name__)
@@ -194,16 +194,17 @@ async def main():
             "connection": redis_conn,
             "lockDuration": 300000, 
             "maxStalledCount": 0,
-            # --- THE ANTI-SPAM FIX (Saves Upstash Limits) ---
-            "drainDelay": 15,          # Wait 15 seconds after queue empties before polling again
-            "stalledInterval": 300000, # Only check for stuck jobs every 5 minutes (300,000 ms)
+            # --- THE OOM SHIELD ---
+            "concurrency": 2,         # Only process 2 jobs at once, let others wait in Redis
+            # --- HIGH SPEED POLLING FOR REDIS CLOUD ---
+            "drainDelay": 1,          # Check for new jobs instantly (1 second)
+            "stalledInterval": 30000, # Check for stuck jobs every 30 seconds
             "metrics": {
-                "maxDataPoints": 0     # Stop storing unnecessary metrics
+                "maxDataPoints": 0     
             }
-            # ------------------------------------------------
         }
     )
-    print("Worker is live and optimized for Upstash. Waiting for jobs...", flush=True)
+    print("Worker is live, OOM-proof, and optimized for Speed. Waiting for jobs...", flush=True)
     while True:
         await asyncio.sleep(3600)
 
