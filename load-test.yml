@@ -1,0 +1,17 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 10
+      arrivalRate: 10
+      name: "Warm up the engine"
+    - duration: 30
+      arrivalRate: 150
+      name: "Spike to roughly 4500-5000 requests"
+
+scenarios:
+  - name: "Submit financial analysis job"
+    flow:
+      - post:
+          url: "/api/v1/analyze"
+          json:
+            ticker: "TSLA"
