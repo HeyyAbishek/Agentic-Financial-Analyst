@@ -11,7 +11,7 @@ def analyze_growth(state: AgentState) -> dict:
 
         llm = ChatGroq(
             groq_api_key=os.getenv("GROQ_API_KEY"),
-            model_name=os.getenv("BULL_MODEL_NAME", "llama-3.3-70b-versatile"),
+            model_name=os.getenv("BULL_MODEL_NAME", "openai/gpt-oss-120b"),
             max_retries=3
         )
 
