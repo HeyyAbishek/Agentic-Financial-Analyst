@@ -23,7 +23,7 @@ def synthesize_debate(state: AgentState) -> dict:
         # Initialize the Groq model
         llm = ChatGroq(
             groq_api_key=os.getenv("GROQ_API_KEY"),
-            model_name=os.getenv("JUDGE_MODEL_NAME", "llama-3.3-70b-versatile"),
+            model_name=os.getenv("JUDGE_MODEL_NAME", "openai/gpt-oss-120b"),
             max_retries=3,
         )
 
