@@ -7,7 +7,7 @@
 ![Workflow](https://img.shields.io/badge/Workflow-LangGraph-purple)
 ![Infrastructure](https://img.shields.io/badge/Infrastructure-Redis%20%7C%20BullMQ-red)
 
-**Agentic Financial Analyst** is a production-grade AI platform for autonomous fundamental stock analysis. It addresses LLM hallucination risks through deterministic mathematical guardrails, real-time market data injection, and a specialized multi-agent workflow powered by LangGraph and gpt-oss-120b, simulating a real-world investment committee.
+**Agentic Financial Analyst** is a production-grade AI platform for autonomous fundamental stock analysis. It addresses LLM hallucination risks through deterministic mathematical guardrails, real-time market data injection, and a specialized multi-agent workflow powered by **LangGraph** and **gpt-oss-120b**, simulating a real-world investment committee.
 
 <img width="1846" height="904" alt="Screenshot 2026-03-01 001859" src="https://github.com/user-attachments/assets/b5b52ae3-b1fa-41de-8832-0625c2508871" />
 
